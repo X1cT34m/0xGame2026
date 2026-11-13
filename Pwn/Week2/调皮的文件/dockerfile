@@ -1,0 +1,29 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN sed -i \
+    's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' \
+    /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y socat patchelf gcc
+
+# 创建低权限用户
+RUN groupadd -r ctf && useradd -r -g ctf -d /home/ctf -s /usr/sbin/nologin ctf
+
+WORKDIR /home/ctf
+
+# 复制源码、libc、ld（不再 COPY flag）
+COPY pwn .
+COPY entrypoint.sh /entrypoint.sh
+
+
+
+# 权限设置
+RUN chmod 755 /home/ctf/pwn && \
+    chmod 755 /entrypoint.sh && \
+    chown -R root:ctf /home/ctf
+
+EXPOSE 10001
+
+ENTRYPOINT ["/entrypoint.sh"]

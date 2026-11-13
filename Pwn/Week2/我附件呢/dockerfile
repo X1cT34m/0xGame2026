@@ -1,0 +1,26 @@
+FROM ubuntu:22.04
+
+RUN sed -i \
+    's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' \
+    /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y socat patchelf gcc
+
+RUN useradd -m ctf
+
+WORKDIR /home/ctf
+COPY pwn.c .
+
+RUN gcc pwn.c -o pwn -no-pie 
+
+RUN rm pwn.c
+
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+RUN chown -R root:ctf /home/ctf && \
+    chmod -R 750 /home/ctf
+
+EXPOSE 10001
+
+CMD ["/start.sh"]

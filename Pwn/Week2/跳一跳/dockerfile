@@ -1,0 +1,36 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 换阿里云源并安装必要工具
+RUN sed -i \
+    's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' \
+    /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y socat patchelf gcc
+
+# 创建低权限用户
+RUN groupadd -r ctf && useradd -r -g ctf -d /home/ctf -s /usr/sbin/nologin ctf
+
+WORKDIR /home/ctf
+
+# 复制源码、libc、ld（不再 COPY flag）
+COPY pwn .
+COPY libc.so.6 .
+COPY ld-linux-x86-64.so.2 .
+COPY entrypoint.sh /entrypoint.sh
+
+# 绑定指定 libc / 动态链接器
+RUN patchelf --set-interpreter /home/ctf/ld-linux-x86-64.so.2 /home/ctf/pwn && \
+    patchelf --set-rpath /home/ctf /home/ctf/pwn
+
+# 权限设置
+RUN chmod 755 /home/ctf/pwn && \
+    chmod 644 /home/ctf/libc.so.6 && \
+    chmod 755 /home/ctf/ld-linux-x86-64.so.2 && \
+    chmod 755 /entrypoint.sh && \
+    chown -R root:ctf /home/ctf
+
+EXPOSE 10001
+
+ENTRYPOINT ["/entrypoint.sh"]
