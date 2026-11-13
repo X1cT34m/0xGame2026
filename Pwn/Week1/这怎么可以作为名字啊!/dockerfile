@@ -1,0 +1,25 @@
+FROM ubuntu:22.04
+
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g; s/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y gcc socat patchelf && \
+    rm -rf /var/lib/apt/lists/*
+
+
+WORKDIR /home/ctf
+
+COPY pwn .
+COPY libc.so.6 .
+COPY ld-linux-x86-64.so.2 .
+COPY flag /home/ctf/flag
+
+RUN chmod 444 /home/ctf/flag
+RUN patchelf --set-interpreter /home/ctf/ld-linux-x86-64.so.2 /home/ctf/pwn && \
+    patchelf --set-rpath /home/ctf /home/ctf/pwn
+RUN chmod 755 /home/ctf/pwn && \
+    chmod 644 /home/ctf/libc.so.6 && \
+    chmod 755 /home/ctf/ld-linux-x86-64.so.2 
+
+EXPOSE 10001
+
+ENTRYPOINT ["socat", "TCP-LISTEN:10001,reuseaddr,fork", "EXEC:/home/ctf/pwn,stderr"]
